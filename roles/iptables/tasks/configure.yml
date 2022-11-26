@@ -1,0 +1,71 @@
+---
+- name: Get current iptables rules
+  shell: iptables -S
+  register: iptables_S_output
+
+- name: Get current ip6tables rules
+  shell: ip6tables -S
+  register: ip6tables_S_output
+
+  # expecting
+  # [ "-P INPUT ACCEPT", "-P FORWARD ACCEPT", "-P OUTPUT ACCEPT" ]
+- name: Configuring iptables ...
+  when:
+    - iptables_S_output.stdout_lines | length == 3
+    - ip6tables_S_output.stdout_lines | length == 3
+  block:
+    - name: "Create directory {{ iptables.rules_dir }}"
+      file:
+        path: "{{ iptables.rules_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Generating IPv4 rules ...
+      template:
+        src: roles/iptables/templates/rules4.j2
+        dest: "{{ iptables.rules_dir }}/rules.v4"
+        owner: root
+        group: root
+
+    - name: Test IPv4 rules
+      shell: iptables-restore --test "{{ iptables.rules_dir }}/rules.v4"
+
+    - name: Generating IPv6 rules ...
+      template:
+        src: roles/iptables/templates/rules6.j2
+        dest: "{{ iptables.rules_dir }}/rules.v6"
+        owner: root
+        group: root
+
+    - name: Test IPv6 rules
+      shell: iptables-restore --test "{{ iptables.rules_dir }}/rules.v4"
+
+    - name: Installing IPv4 rules
+      shell: iptables-restore "{{ iptables.rules_dir }}/rules.v4"
+      register: iptables_restore_v4
+
+    - name: debug iptables_restore_v4
+      debug:
+        var: iptables_restore_v4
+      when: iptables_restore_v4.failed
+
+    - name: Installing IPv6 rules
+      shell: ip6tables-restore "{{ iptables.rules_dir }}/rules.v6"
+      register: iptables_restore_v6
+
+    - name: debug iptables_restore_v6
+      debug:
+        var: iptables_restore_v6
+      when: iptables_restore_v6.failed
+
+    - include_tasks: debian/configure.yml
+      when: ansible_facts['os_family'] == 'Debian'
+
+- name: Save iptables rules ...
+  tags: iptables-save
+  block:
+    - name: Saving IPv4 rules
+      shell: iptables-save -f /etc/iptables/rules.v4
+
+    - name: Saving IPv6 rules
+      shell: ip6tables-save -f /etc/iptables/rules.v6

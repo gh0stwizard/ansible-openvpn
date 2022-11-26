@@ -1,0 +1,41 @@
+---
+- set_fact:
+    classic_dir: "{{ clients_dir }}/{{ item }}/classic"
+
+- name: "comparing files"
+  shell: "diff {{ pki_dir }}/issued/{{ item }}.crt {{ classic_dir }}/{{ item }}.crt"
+  ignore_errors: true
+  register: diff_crt
+
+- when:
+    - diff_crt.rc != 0
+  block:
+    - name: "copy ca.crt to {{ classic_dir }}"
+      copy:
+        src: "{{ pki_dir }}/ca.crt"
+        dest: "{{ classic_dir }}/ca.crt"
+        remote_src: yes
+
+    - name: "copy {{ item }}.crt to {{ classic_dir }}"
+      copy:
+        src: "{{ pki_dir }}/issued/{{ item }}.crt"
+        dest: "{{ classic_dir }}/{{ item }}.crt"
+        remote_src: yes
+
+    - name: "copy {{ item }}.key to {{ classic_dir }}"
+      copy:
+        src: "{{ pki_dir }}/private/{{ item }}.key"
+        dest: "{{ classic_dir }}/{{ item }}.key"
+        remote_src: yes
+
+    - name: "copy tc.key to {{ classic_dir }}"
+      copy:
+        src: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/tc.key"
+        dest: "{{ classic_dir }}/tc.key"
+        remote_src: yes
+
+    - name: "copy ta.key to {{ classic_dir }}"
+      copy:
+        src: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/ta.key"
+        dest: "{{ classic_dir }}/ta.key"
+        remote_src: yes

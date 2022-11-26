@@ -1,0 +1,19 @@
+---
+- name: Initializing
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: export hostvars
+      copy:
+        content: "{{ hostvars }}"
+        dest: hostvars.json
+      delegate_to: localhost
+  tags: always
+
+- name: Installing services
+  hosts: all:!localhost
+  gather_facts: false
+  roles:
+    - role: prepare
+    - role: iptables
+    - role: openvpn

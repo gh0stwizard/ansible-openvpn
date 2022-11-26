@@ -1,0 +1,11 @@
+---
+- name: install
+  apt:
+    pkg:
+        - openvpn
+        - easy-rsa
+  register: apt_install_openvpn
+
+- name: debug install
+  debug:
+    var: apt_install_openvpn

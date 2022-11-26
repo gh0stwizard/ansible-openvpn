@@ -1,0 +1,10 @@
+*.json
+*.crt
+*.key
+*~
+download/*
+inventory/hosts
+inventory/**/vault.yml
+passwords/*
+!passwords/README
+test*

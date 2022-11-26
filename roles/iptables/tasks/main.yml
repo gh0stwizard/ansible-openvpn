@@ -1,0 +1,9 @@
+---
+- name: Installing iptables
+  tags: iptables
+  block:
+    - import_tasks: install.yml
+      tags:
+        - install
+        - iptables-install
+    - import_tasks: configure.yml

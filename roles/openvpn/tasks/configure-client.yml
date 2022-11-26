@@ -1,0 +1,76 @@
+---
+- name: "Check directory: {{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  stat:
+    path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  register: stat_path_instance
+
+- name: "fail: {{ openvpn.etc_dir }}/{{ openvpn.instance }} is missing"
+  fail:
+    msg: "{{ openvpn.etc_dir }}/{{ openvpn.instance }} doesn't exist!"
+  when:
+    - stat_path_instance.failed == false
+    - stat_path_instance.stat.exists == false
+
+- name: "Generating certificates for clients ..."
+  environment:
+    EASYRSA_BATCH: 1
+    EASYRSA_VARS_FILE: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/vars"
+  block:
+    # TODO: renew
+    - name: "easyrsa build-client-full [...] nopass"
+      shell: "./easyrsa build-client-full {{ item }} nopass"
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: "pki/issued/{{ item }}.crt"
+      loop: "{{ openvpn.clients }}"
+
+- name: "Generating configuration files for clients ..."
+  block:
+    - name: set facts
+      set_fact:
+        pki_dir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+        clients_dir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/clients"
+
+    - name: slurp ca.crt
+      slurp:
+        src: "{{ pki_dir }}/ca.crt"
+      register: slurp_ca_crt
+
+    - name: slurp tc.key
+      slurp:
+        src: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/tc.key"
+      register: slurp_tc_key
+
+    - name: slurp ta.key
+      slurp:
+        src: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/tc.key"
+      register: slurp_ta_key
+
+    - name: Creating directory for clients configurations
+      file:
+        path: "{{ clients_dir }}"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: "Processing clients configurations ..."
+      include_tasks: generate_ovpn.yml
+      loop: "{{ openvpn.clients }}"
+
+    - name: "Copy clients files ..."
+      include_tasks: copy_client_files.yml
+      loop: "{{ openvpn.clients }}"
+
+- name: "Compressing clients files ..."
+  tags: openvpn-client-files
+  shell: "tar -cjvf /root/openvpn-clients.tar.bz2 clients"
+  args:
+    chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+
+- name: "Fetching clients archive ..."
+  tags: openvpn-client-files
+  fetch:
+    src: "/root/openvpn-clients.tar.bz2"
+    dest: "download/{{ inventory_hostname }}-clients.tar.bz2"
+    flat: yes

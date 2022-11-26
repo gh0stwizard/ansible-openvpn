@@ -1,0 +1,18 @@
+---
+- name: Copy /etc/network/if-pre-up.d/iptables
+  copy:
+    src: roles/iptables/files/debian/if-pre-up_iptables
+    dest: /etc/network/if-pre-up.d/iptables
+    owner: root
+    group: root
+    mode: '0755'
+    backup: yes
+
+- name: Copy /etc/network/if-pre-up.d/ip6tables
+  copy:
+    src: roles/iptables/files/debian/if-pre-up_iptables6
+    dest: /etc/network/if-pre-up.d/ip6tables
+    owner: root
+    group: root
+    mode: '0755'
+    backup: yes

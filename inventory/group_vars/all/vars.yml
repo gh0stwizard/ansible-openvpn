@@ -1,0 +1,18 @@
+iptables:
+  rules_dir: "{{ iptables_rules_dir | default('/etc/iptables/ansible') }}"
+  vpn_port: "{{ iptables_vpn_port | default('10194') }}"
+openvpn:
+  port: "{{ openvpn_port | default('10194') }}"
+  proto: "{{ openvpn_proto | default('udp6') }}"
+  netv4: "{{ openvpn_netv4 | default('172.27.1.0/24') }}"
+  netv6: "{{ openvpn_netv6 | default('2001:db8:0:1::/64') }}"
+  dns_servers_ipv4: "{{ openvpn_dns_servers_ipv4 | default(['8.8.8.8','8.8.4.4']) }}"
+  dns_servers_ipv6: "{{ openvpn_dns_servers_ipv6 | default(['2001:4860:4860::8888','2001:4860:4860::8844']) }}"
+  etc_dir: "{{ openvpn_etc_dir | default('/etc/openvpn') }}"
+  instance: "{{ openvpn_instance | default('server') }}"
+  clients: "{{ openvpn_clients | default(['phone','pc','laptop']) }}"
+  CN: "{{ openvpn_CN | default('Best CA') }}"
+  tls_mode: "{{ openvpn_tls_mode | default('tls-crypt') }}"
+ansible_password: "{{ vault_ansible_password }}"
+ansible_ssh_private_key_file: '~/.ssh/id_rsa'
+ansible_user: root

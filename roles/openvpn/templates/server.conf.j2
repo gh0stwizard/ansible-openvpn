@@ -1,0 +1,61 @@
+mode server
+tls-server
+port {{ openvpn.port }}
+proto {{ openvpn.proto }}
+push "comp-lzo no"
+push "explicit-exit-notify 3"
+{% if openvpn.proto == "udp6" %}
+push "redirect-gateway def1 ipv6 bypass-dhcp"
+{% else %}
+push "redirect-gateway def1 bypass-dhcp"
+{% endif %}
+{% if openvpn.dns_servers_ipv4 is string %}
+push "dhcp-option DNS {{ openvpn.dns_servers_ipv4 }}"
+{% else %}
+{% for srv in openvpn.dns_servers_ipv4 %}
+push "dhcp-option DNS {{ srv }}"
+{% endfor %}
+{% endif %}
+{% if openvpn.proto == "udp6" %}
+{% if openvpn.dns_servers_ipv6 is string %}
+push "dhcp-option DNS {{ openvpn.dns_servers_ipv6 }}"
+{% else %}
+{% for srv in openvpn.dns_servers_ipv6 %}
+push "dhcp-option DNS {{ srv }}"
+{% endfor %}
+{% endif %}
+{% endif %}
+
+user nobody
+group nogroup
+dev tun
+ifconfig-pool-persist ipp.txt
+ca   {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/ca.crt
+cert {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/issued/server.crt
+key  {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/private/server.key
+dh   {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/dh.pem
+crl-verify {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/crl.pem
+{% if openvpn.tls_mode == 'tls-crypt' %}
+tls-crypt {{ openvpn.etc_dir }}/{{ openvpn.instance }}/tc.key
+{% else %}
+tls-auth {{ openvpn.etc_dir }}/{{ openvpn.instance }}/ta.key
+key-direction 0
+{% endif %}
+auth-nocache
+cipher AES-256-GCM
+auth SHA512
+
+server {{ openvpn.netv4 | ansible.utils.ipaddr('network') }} {{ openvpn.netv4 | ansible.utils.ipaddr('netmask') }}
+{% if openvpn.proto == "udp6" %}
+server-ipv6 {{ openvpn.netv6 }}
+{% endif %}
+
+keepalive 10 120
+remote-cert-tls client
+comp-lzo no
+persist-key
+persist-tun
+status /var/log/openvpn/status.log
+verb 1
+client-to-client
+explicit-exit-notify 3

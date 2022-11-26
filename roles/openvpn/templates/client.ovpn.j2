@@ -1,0 +1,40 @@
+client
+dev tun
+<connection>
+proto {{ proto }}
+port {{ openvpn.port }}
+{% if proto | regex_search('6') is none %}
+remote {{ ansible_default_ipv4['address'] }}
+{% else %}
+remote {{ ansible_default_ipv6['address'] }}
+{% endif %}
+connect-timeout 15
+nobind
+</connection>
+<ca>
+{{ ca_text }}
+</ca>
+<cert>
+{{ crt_text }}
+</cert>
+<key>
+{{ key_text }}
+</key>
+{% if openvpn.tls_mode == 'tls-crypt' %}
+<tls-crypt>
+{{ tc_text }}
+</tls-crypt>
+{% else %}
+<tls-auth>
+{{ ta_text }}
+</tls-auth>
+key-direction 1
+{% endif %}
+persist-key
+persist-tun
+mute-replay-warnings
+remote-cert-tls server
+auth-nocache
+cipher AES-256-GCM
+auth SHA512
+verb 1

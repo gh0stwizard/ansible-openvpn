@@ -1,0 +1,172 @@
+---
+- name: "Create OpenVPN directory: {{ openvpn.etc_dir }}"
+  tags:
+    - openvpn-cfg
+    - openvpn-pki
+    - openvpn-crl
+  file:
+    path: "{{ openvpn.etc_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "Generating {{ openvpn.instance }}.conf"
+  tags: openvpn-cfg
+  template:
+    src: roles/openvpn/templates/server.conf.j2
+    dest: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}.conf"
+
+- name: "stat: {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+  tags:
+    - openvpn-pki
+  stat:
+    path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+  register: stat_path_pki
+
+- name: "stat: {{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  tags:
+    - openvpn-pki
+  stat:
+    path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  register: stat_path_instance
+
+- name: "Check if {{ openvpn.etc_dir }}/{{ openvpn.instance }} is empty"
+  find:
+    paths: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  register: find_paths_openvpn_instance
+
+- name: 'fail: {{ openvpn.etc_dir }}/{{ openvpn.instance }} is not empty and PKI directory is missing'
+  fail:
+    msg: "{{ openvpn.etc_dir }}/{{ openvpn.instance }} is not empty and PKI directory is missing"
+  when:
+    - find_paths_openvpn_instance.matched > 0
+    - stat_path_pki.stat.exists == false
+
+- name: "rmdir: {{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+  tags: openvpn-pki
+  when:
+    - stat_path_instance.stat.exists == true
+    - stat_path_pki.stat.exists == false
+    - find_paths_openvpn_instance.matched == 0
+  file:
+    path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+    state: absent
+
+- name: Generating PKI ...
+  tags: openvpn-pki
+  when:
+    - stat_path_pki.failed == false
+    - stat_path_pki.stat.exists == false
+  environment:
+    EASYRSA_BATCH: 1
+    EASYRSA_VARS_FILE: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/vars"
+  block:
+    - name: "make-cadir {{ openvpn.instance }}"
+      shell: "make-cadir {{ openvpn.instance }}"
+      args:
+        chdir: "{{ openvpn.etc_dir }}"
+        creates: "{{ openvpn.instance }}"
+
+    - name: Set our CN in vars
+      lineinfile:
+        path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/vars"
+        regexp: '^#set_var EASYRSA_REQ_CN'
+        line: "set_var EASYRSA_REQ_CN \"{{ openvpn.CN }}\""
+
+    - name: easyrsa init-pki
+      shell: ./easyrsa init-pki
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: "pki"
+
+    - name: easyrsa build-ca nopass
+      shell: ./easyrsa build-ca nopass
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: "pki/ca.crt"
+
+    - name: easyrsa build-server-full server nopass
+      shell: ./easyrsa build-server-full server nopass
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: "pki/issued/server.crt"
+
+    - name: "chmod 0755 {{ openvpn.instance }}"
+      file:
+        path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        mode: u=rwX,g=rX,o=rX
+
+    - name: "chmod 0755 {{ openvpn.instance }}/pki"
+      file:
+        path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+        mode: u=rwX,g=rX,o=rX
+
+
+- name: "Check pki directory: {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+  tags:
+    - openvpn-crl
+    - openvpn-tckey
+    - openvpn-dh
+  stat:
+    path: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki"
+  register: stat_path_pki
+
+
+- name: Generating DH
+  tags: openvpn-dh
+  block:
+    - name: "fail: {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki is missing"
+      fail:
+        msg: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki doesn't exist!"
+      when:
+        - stat_path_pki.failed == false
+        - stat_path_pki.stat.exists == false
+
+    - name: easyrsa gen-dh
+      shell: ./easyrsa gen-dh
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: "pki/dh.pem"
+
+
+- name: Generating CRL ...
+  tags: openvpn-crl
+  block:
+    - name: "fail: {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki is missing"
+      fail:
+        msg: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki doesn't exist!"
+      when:
+        - stat_path_pki.failed == false
+        - stat_path_pki.stat.exists == false
+
+    - name: easyrsa gen-crl
+      shell: ./easyrsa gen-crl
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+
+    - name: chmod 0644 pki/crl.pem
+      file:
+        dest: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki/crl.pem"
+        mode: '0644'
+
+
+- name: Generating tc.key
+  tags: openvpn-tckey
+  block:
+    - name: "fail: {{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki is missing"
+      fail:
+        msg: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}/pki doesn't exist!"
+      when:
+        - stat_path_pki.failed == false
+        - stat_path_pki.stat.exists == false
+
+    - name: openvpn --genkey --secret tc.key
+      shell: openvpn --genkey --secret tc.key
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: tc.key
+
+    - name: openvpn --genkey --secret ta.key
+      shell: openvpn --genkey --secret ta.key
+      args:
+        chdir: "{{ openvpn.etc_dir }}/{{ openvpn.instance }}"
+        creates: ta.key

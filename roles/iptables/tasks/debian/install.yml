@@ -1,0 +1,11 @@
+---
+- name: install
+  apt:
+    pkg:
+      - iptables
+      - iptables-persistent
+  register: apt_install_iptables
+
+- name: debug install
+  debug:
+    var: apt_install_iptables

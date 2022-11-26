@@ -1,0 +1,6 @@
+---
+- name: Updating system
+  tags: prepare
+  block:
+    - include_tasks: debian/upgrade.yml
+      when: ansible_facts['os_family'] == 'Debian'

@@ -1,0 +1,35 @@
+---
+- name: apt-get update
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  register: apt_update
+
+- name: debug apt_update
+  debug:
+    var: apt_update
+
+- name: apt-get upgrade
+  apt:
+    upgrade: yes
+  register: apt_upgrade
+
+- name: debug apt_upgrade
+  debug:
+    var: apt_upgrade
+
+- name: apt-get dist-upgrade
+  apt:
+    upgrade: dist
+  register: apt_dist_upgrade
+
+- name: debug apt_dist_upgrade
+  debug:
+    var: apt_dist_upgrade
+
+- name: "Reboot ... (timeout 300)"
+  reboot:
+    reboot_timeout: 300
+  when:
+    - (apt_dist_upgrade['failed'] == false)
+    - (apt_upgrade['stdout_lines'] | select('match', '^Setting up linux-image') | list | length >= 1) or (apt_dist_upgrade['stdout_lines'] | select('match', '^Setting up linux-image') | list | length >= 1)
