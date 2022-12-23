@@ -1,1 +1,5 @@
 Directory keeper for git.
+
+Files, see create-vault.sh for details:
+  * ssh: to keep ssh password
+  * vault: to keep vault password
