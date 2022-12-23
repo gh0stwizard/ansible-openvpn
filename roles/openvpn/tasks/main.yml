@@ -15,7 +15,16 @@
       tags:
         - openvpn-client
 
+    - import_tasks: configure-sysctl.yml
+      tags:
+        - openvpn-server
+
     - name: start openvpn
       service:
         name: openvpn
+        state: started
+
+    - name: "start openvpn@{{ openvpn.instance }}"
+      service:
+        name: 'openvpn@{{ openvpn.instance }}'
         state: started

@@ -1,0 +1,18 @@
+---
+- name: set net.ipv4.ip_forward=1 in /etc/sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^#net.ipv4.ip_forward=1'
+    line: 'net.ipv4.ip_forward=1'
+
+- name: set net.ipv6.conf.all.forwarding=1 in /etc/sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^#net.ipv6.conf.all.forwarding=1'
+    line: 'net.ipv6.conf.all.forwarding=1'
+
+- name: sysctl net.ipv4.ip_forward=1
+  shell: sysctl net.ipv4.ip_forward=1
+
+- name: sysctl net.ipv6.conf.all.forwarding=1
+  shell: sysctl net.ipv6.conf.all.forwarding=1

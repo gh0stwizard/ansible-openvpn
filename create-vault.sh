@@ -25,6 +25,8 @@ else
     ansible-vault encrypt_string --output ${OUTFILE} --stdin-name ${VARNAME}
 fi
 
+echo ""
 echo "***"
 echo "*** DON'T FORGET DELETE FILES: passwords/vault passwords/ssh"
 echo "***"
+echo ""
