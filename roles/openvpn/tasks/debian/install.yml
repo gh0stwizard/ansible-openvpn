@@ -4,6 +4,8 @@
     pkg:
         - openvpn
         - easy-rsa
+        - tar
+        - bzip2
   register: apt_install_openvpn
 
 - name: debug install
