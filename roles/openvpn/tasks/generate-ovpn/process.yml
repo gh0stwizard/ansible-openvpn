@@ -1,0 +1,10 @@
+---
+- name: "Generating all-in-one .ovpn for {{ client }}/{{ proto }}"
+  template:
+    src: roles/openvpn/templates/client.ovpn.j2
+    dest: "{{ aio_dir }}/{{ inventory_hostname }}-{{ proto }}.ovpn"
+
+- name: "Generating classic .ovpn for {{ client }}/{{ proto }}"
+  template:
+    src: roles/openvpn/templates/classic/client.ovpn.j2
+    dest: "{{ classic_dir }}/{{ inventory_hostname }}-{{ proto }}.ovpn"

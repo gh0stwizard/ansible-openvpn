@@ -1,0 +1,51 @@
+---
+- name: "stat: {{ clients_dir }}/{{ client }}"
+  stat:
+    path: "{{ clients_dir }}/{{ client }}"
+  register: stat_path_client
+
+- name: set facts (generate-ovpn.yml)
+  set_fact:
+    openvpn_client_proto_list:
+      - "{{ openvpn.proto }}"
+      - "{{ openvpn.proto | regex_search('[A-Za-z]+') }}"
+    aio_dir: "{{ clients_dir }}/{{ client }}/all-in-one"
+    classic_dir: "{{ clients_dir }}/{{ client }}/classic"
+
+- when:
+    - stat_path_client.failed == false
+    - stat_path_client.stat.exists == false
+  block:
+    - name: "slurp {{ client }}.crt"
+      slurp:
+        src: "{{ pki_dir }}/issued/{{ client }}.crt"
+      register: slurp_client_crt
+
+    - name: "slurp {{ client }}.key"
+      slurp:
+        src: "{{ pki_dir }}/private/{{ client }}.key"
+      register: slurp_client_key
+
+    - name: Remember contents of files
+      set_fact:
+        ca_text: "{{ slurp_ca_crt['content'] | b64decode | trim }}"
+        crt_text: "{{ slurp_client_crt['content'] | b64decode | regex_search('(:?-----BEGIN CERTIFICATE-----((?:\n.+)+)\n-----END CERTIFICATE-----\n?)', multiline=True) | trim }}"
+        key_text: "{{ slurp_client_key['content'] | b64decode | trim }}"
+        tc_text: "{{ slurp_tc_key['content'] | b64decode | trim }}"
+        ta_text: "{{ slurp_ta_key['content'] | b64decode | trim }}"
+
+    - name: "Creating all-in-one directory for client: {{ client }}"
+      file:
+        path: "{{ aio_dir }}"
+        state: directory
+
+    - name: "Creating classic directory for client: {{ client }}"
+      file:
+        path: "{{ classic_dir }}"
+        state: directory
+
+    - name: Generating .ovpn files ...
+      include_tasks: process.yml
+      loop: "{{ openvpn_client_proto_list | unique }}"
+      loop_control:
+        loop_var: proto
