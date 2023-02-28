@@ -7,15 +7,15 @@
         - install
         - openvpn-install
 
-    - import_tasks: configure-server.yml
+    - import_tasks: configure/server.yml
       tags:
         - openvpn-server
 
-    - import_tasks: configure-client.yml
+    - import_tasks: configure/client.yml
       tags:
         - openvpn-client
 
-    - import_tasks: configure-sysctl.yml
+    - import_tasks: configure/sysctl.yml
       tags:
         - openvpn-server
 
