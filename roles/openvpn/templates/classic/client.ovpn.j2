@@ -13,8 +13,8 @@ persist-tun
 mute-replay-warnings
 remote-cert-tls server
 ca ca.crt
-cert {{ item }}.crt
-key {{ item }}.key
+cert {{ client }}.crt
+key {{ client }}.key
 {% if openvpn.tls_mode == 'tls-crypt' %}
 tls-crypt tc.key
 {% else %}

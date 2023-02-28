@@ -1,4 +1,7 @@
 ---
+#
+# item ==> client
+#
 - name: "stat: {{ clients_dir }}/{{ client }}"
   stat:
     path: "{{ clients_dir }}/{{ client }}"

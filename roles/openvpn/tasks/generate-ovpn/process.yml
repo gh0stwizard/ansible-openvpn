@@ -1,4 +1,7 @@
 ---
+#
+# item ==> proto
+#
 - name: "Generating all-in-one .ovpn for {{ client }}/{{ proto }}"
   template:
     src: roles/openvpn/templates/client.ovpn.j2
