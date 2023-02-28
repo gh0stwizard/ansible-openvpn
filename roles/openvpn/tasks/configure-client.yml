@@ -55,11 +55,11 @@
         group: root
 
     - name: "Processing clients configurations ..."
-      include_tasks: generate_ovpn.yml
+      include_tasks: generate-ovpn.yml
       loop: "{{ openvpn.clients }}"
 
     - name: "Copy clients files ..."
-      include_tasks: copy_client_files.yml
+      include_tasks: copy-client-files.yml
       loop: "{{ openvpn.clients }}"
 
 - name: "Compressing clients files ..."
